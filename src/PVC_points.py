@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.random as rd
 import matplotlib.pyplot as plt
 from src.PVC import PVC
 
@@ -7,7 +8,8 @@ class PVC_points(PVC):
         super().__init__()
         self.points_ = None
         self.idx_map_ = None
-        self.inv_ = None         
+        self.inv_ = None   
+        self.seed_ = None      
 
     def charger_de_liste(self, points):
         self.__init__()
@@ -22,6 +24,7 @@ class PVC_points(PVC):
                 M[i, j] = self.euclidean_distance(p, q)
 
         self.charger_de_matrice(M)
+        self.seed_ = np.random.randint(0, self.taille_)
         self.idx_map_ = idx_map
         self.inv_ = inv
 
@@ -36,7 +39,23 @@ class PVC_points(PVC):
                 x, y = map(float, line.split(","))
                 points.append((x, y))
 
-            self.charger_de_liste(points)        
+            self.charger_de_liste(points)   
+
+    @staticmethod
+    def generer_points(n):
+        E = rd.random(n)
+        F = rd.random(n)
+
+        L = [(float(x), float(y)) for x, y in zip(E, F)]
+        return L 
+    
+    @staticmethod
+    def generer_fichier(n, nom="points"):
+        with open(f"./data/{nom}.txt", "w") as file:
+            E = rd.random(n)
+            F = rd.random(n)
+            for x, y in zip(E, F):
+                file.write(f"({float(x)}, {float(y)})\n")
 
     @staticmethod
     def euclidean_distance(P, Q):
@@ -58,27 +77,27 @@ class PVC_points(PVC):
         cycle = [self.idx_map_[i] for i in c]
         return super().longueur(cycle)
 
-    def PPP(self, source):
+    def PPP(self):
+        assert self.points_ != None, "La liste des points ne peut pas etre NIL"
         assert self.taille_ > 2, "le nombre de points doit etre superieur a 3" 
-        assert source in self.points_, "Il faut choisir un point existant"
-        s = self.idx_map_[source]
-        cycle = super().PPP(s)
+        cycle = super().PPP(self.seed_)
         return self._map_cycle(cycle)
 
-    def OptPPP(self, source):
+    def OptPPP(self):
+        assert self.points_ != None, "La liste des points ne peut pas etre NIL"
         assert self.taille_ > 2, "le nombre de points doit etre superieur a 3" 
-        assert source in self.points_, "Il faut choisir un point existant"
-        s = self.idx_map_[source]
-        cycleB = super().PPP(s)
+        cycleB = super().PPP(self.seed_)
         cycle = super().OptPPP(cycleB)
         return self._map_cycle(cycle)
 
     def OptPrim(self):
+        assert self.points_ != None, "La liste des points ne peut pas etre NIL"
         assert self.taille_ > 2, "le nombre de points doit etre superieur a 3" 
         cycle = super().OptPrim()
         return self._map_cycle(cycle)
     
     def HDS(self):
+        assert self.points_ != None, "La liste des points ne peut pas etre NIL"
         assert self.taille_ > 2, "le nombre de points doit etre superieur a 3" 
         cycle = super().HDS()
         return self._map_cycle(cycle)
