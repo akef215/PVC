@@ -1,0 +1,152 @@
+\documentclass[11pt,a4paper]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{algorithm2e}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+
+% =======================
+% Document
+% =======================
+\begin{document}
+
+\title{Algorithme du Point le Plus Proche pour le Problème du Voyageur de Commerce}
+\author{Mohamed Elakef Zenagui}
+\date{}
+\maketitle
+
+\section{Introduction}
+
+Le problème du voyageur de commerce (\textit{Travelling Salesman Problem}, TSP) consiste à trouver une tournée hamiltonienne
+de coût minimal qui passe exactement une fois par chaque sommet d’un graphe complet valué. Ce problème est connu pour être NP-difficile.
+
+Dans ce travail, nous présentons une approche heuristique appelée \textbf{Point le Plus Proche (PPP)}, 
+qui construit une solution approximative du TSP en ajoutant à chaque étape le point non encore inclus dans le cycle le plus proche du cycle existant.
+
+\section{Structures de données}
+
+CONSTANTE \textbf{n} = 10\\
+\newline
+TYPE \textbf{Arrete} = enregistrement\\
+\ \ $sommet$ : entier \\ 
+\ \ $suiv$ : $\uparrow$ Arrete \\ 
+FIN\\
+\newline
+TYPE \textbf{GrapheM} = enregistrement\\
+\ \ n : entier\\
+\ \ M : Tableau[1..n][1..n] de \textbf{réel}\\
+FIN\\
+\newline
+TYPE \textbf{cycle} = $\uparrow \textbf{Arrete}$\\
+\newline
+
+\section{Algorithme PPP}
+
+L’algorithme PPP construit un cycle hamiltonien en partant d’un point initial et en ajoutant successivement 
+le point non inclus le plus proche du cycle courant, jusqu’à ce que tous les points soient inclus.
+
+\begin{algorithm}[H]
+\caption{Algorithme PPP}
+\KwIn{G : GrapheM, s : Entier (point de départ)}
+\KwOut{$c : cycle$ (cycle hamiltonien)}
+\textbf{Var} u, v, min\_dist : Entier\\
+\ \ \ \ \ \ marked : Tableau [1..n] de Booléen\\
+
+$c \leftarrow \emptyset$ \\
+ajouter(c, s)\\
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    $marked[i] \leftarrow Faux$ \\
+}
+$marked[s] \leftarrow Vrai$ \\
+
+\While{$|c| \neq G.n$}{
+    $min\_dist \leftarrow \inf$ \\
+    \For{$i \leftarrow 1$ \KwTo $G.n$}{
+        \If{$\textbf{not } marked[i]$}{
+            $p \leftarrow c$ \\
+            \While{$p \neq NIL$}{
+                \If{$M[i, p \uparrow sommet] < min\_dist$}{
+                    $min\_dist \leftarrow M[i, p \uparrow sommet]$ \\
+                    $u \leftarrow i$ \\
+                    $v \leftarrow p \uparrow sommet$ \\
+                }
+                $p \leftarrow p \uparrow suiv$ \\
+            }       
+        }
+    }
+    ajouter(c, v, u) \tcp{Ajouter u dans le cycle c après v}
+    $marked[u] \leftarrow Vrai$ \\
+}
+ajouter(c, s) \tcp{Fermer le cycle en revenant au point de départ}
+\Return $c$
+\end{algorithm}
+
+\section{Amélioration de la stratégie du Point le Plus Proche}
+
+Une amélioration possible du coût du cycle obtenu par la procédure PPP consiste à \textbf{décroiser les arêtes qui se croisent}.  
+Soit $(i, j)$ un couple d'entiers dans l'intervalle $[1, n]$ tel que $j \ge i + 2$, et soit le cycle :  
+\[
+c = (PL[1], \dots, PL[i], PL[i+1], \dots, PL[j], PL[j+1], \dots, PL[n]).
+\]  
+Si le décroisement des arêtes $(PL[i], PL[i+1])$ et $(PL[j], PL[j+1])$ réduit la longueur totale du cycle, on transforme $c$ en :  
+\[
+\bar{c} = (PL[1], \dots, PL[i], PL[j], \dots, PL[i+1], PL[j+1], \dots, PL[n]).
+\]
+
+\begin{algorithm}[H]
+\caption{Algorithme OptPPP}
+\KwIn{c : cycle obtenu par PPP}
+\KwOut{c : cycle amélioré}
+
+\textbf{Var} amelioration : Booléen \\
+\ \ \ \ \ \ a, b, d, e : Entier \\
+\ \ \ \ \ \ p, q, r, s : $\uparrow Arrete$ \\
+
+$amelioration \leftarrow Vrai$ \\
+
+\While{amelioration}{
+    $amelioration \leftarrow Faux$ \\
+    $p \leftarrow c$ \\
+    $q \leftarrow p \uparrow\ suiv$ \\
+    \While{$q \uparrow\ suiv \neq NIL$}{
+    		$r \leftarrow q \uparrow\ suiv$ \\
+   		$s \leftarrow r \uparrow\ suiv$ \\
+        \While{$s \neq NIL$}{
+            $a \leftarrow p \uparrow\ sommet$, $b \leftarrow q \uparrow\ sommet$ \\
+            $d \leftarrow r \uparrow\ sommet$, $e \leftarrow s \uparrow\ sommet$ \\
+            \If{$G.M[a, d] + G.M[b, e] < G.M[a, b] + G.M[d, e]$}{
+                \tcp{Décroisement avantageux}
+                \tcp{Inverser le segment de c compris entre les cellules q et r}
+                inverser(c, q, r) \\
+                $amelioration \leftarrow Vrai$ \\
+            }
+            $r \leftarrow s$ \\
+        		$s \leftarrow s \uparrow\ suiv$ \\
+        }
+        $p \leftarrow q$ \\
+        $q \leftarrow q \uparrow\ suiv$ \\
+    }
+}
+\Return $c$
+\end{algorithm}
+
+\noindent
+Cet algorithme répète les opérations de décroisement tant qu’il existe des couples d’arêtes croisées dont le remplacement réduit la longueur du cycle.  
+Il permet ainsi d’améliorer efficacement la solution initiale fournie par PPP.
+
+
+\section{Conclusion}
+
+L’algorithme PPP est une heuristique simple et efficace pour générer une solution approximative au TSP.
+Bien qu’il ne garantisse pas d’obtenir le cycle de coût minimal, il fournit rapidement une solution valide
+et peut être utilisé comme point de départ pour d’autres méthodes d’optimisation.
+
+\end{document}

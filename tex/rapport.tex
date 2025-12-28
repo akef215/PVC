@@ -1,0 +1,652 @@
+\documentclass[11pt,a4paper]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{algorithm2e}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\geometry{margin=2.5cm}
+\SetKw{Return}{Retour}
+
+% =======================
+% Document
+% =======================
+\begin{document}
+
+\title{Résolution du Problème du Voyageur de Commerce}
+\author{Mohamed Elakef Zenagui}
+\date{\today}
+\maketitle
+
+\tableofcontents
+\newpage
+\listoffigures
+\listoftables
+\newpage
+
+% ==========================================================
+\section{Introduction}
+
+Le problème du voyageur de commerce (\textit{Travelling Salesman Problem}, TSP) consiste à déterminer une tournée
+hamiltonienne de coût minimal passant exactement une fois par chaque sommet d’un graphe complet valué.
+Ce problème est NP-difficile.
+
+Dans ce projet, nous étudions et implémentons plusieurs approches :
+\begin{itemize}
+    \item des heuristiques constructives (PPP),
+    \item des heuristiques d’amélioration (OptPPP),
+    \item une approximation basée sur un arbre couvrant minimum (PVCPrim),
+    \item un algorithme exact par \textit{Branch and Bound} (HDS).
+\end{itemize}
+
+% ==========================================================
+\section{Structures de données algorithmiques}
+
+\subsection{Structures générales}
+CONSTANTE \textbf{$NOMBRE\_POINTS$} = 10\\
+
+CONSTANTE \textbf{$NOMBRE\_ESSAIS$} = 100\\
+
+TYPE \textbf{Arrete} = enregistrement\\
+\ \ sommet : entier\\
+\ \ poids : réel\\
+\ \ suiv : $\uparrow$ Arrete\\
+FIN\\
+
+TYPE \textbf{GrapheM} = enregistrement\\
+\ \ n : entier\\
+\ \ M : Tableau[1..n][1..n] de réel\\
+FIN\\
+
+TYPE \textbf{cycle} = $\uparrow$ Arrete\\
+
+\subsection{Structures pour Prim}
+
+TYPE \textbf{GrapheD} = enregistrement\\
+\ \ n : entier\\
+\ \ L : Tableau[1..n] de $\uparrow$ Arrete\\
+\ \ cle : Tableau[1..n] de réel\\
+\ \ $\pi$ : Tableau[1..n] d’entier\\
+\ \ NoeudTas : Tableau[1..n] d’entier\\
+FIN\\
+
+TYPE \textbf{Tas} = enregistrement\\
+\ \ dern : entier\\
+\ \ Tab : Tableau[1..n] d’entier\\
+FIN\\
+
+\subsection{Structures pour DFS}
+
+TYPE \textbf{Cellule} = enregistrement\\
+\ \ sommet : entier\\
+\ \ suiv : $\uparrow$ Cellule\\
+FIN\\
+
+TYPE \textbf{GrapheTL} = enregistrement\\
+\ \ n : entier\\
+\ \ L : Tableau[1..n] de $\uparrow$ Cellule\\
+FIN\\
+
+TYPE \textbf{ETAT} = (BLANC, GRIS, NOIR)
+
+\subsection{Traduction en Python}
+
+Les structures de données algorithmiques présentées précédemment peuvent être traduites de manière naturelle en Python,
+en utilisant des structures standards telles que les listes, dictionnaires et files de priorité.
+
+\paragraph{Graphe matriciel}
+La structure \textbf{GrapheM}, représentant un graphe complet valué par une matrice de distances, peut être implémentée
+en Python par une liste de listes ou une matrice NumPy.
+
+\begin{verbatim}
+G = {
+    "n": n,
+    "M": [[float] * n for _ in range(n)]
+}
+\end{verbatim}
+
+\paragraph{Arêtes et cycles}
+Le type \textbf{Arrete}, utilisé pour représenter un cycle sous forme de liste chaînée, peut être remplacé en Python
+par une simple liste d’entiers contenant l’ordre de visite des sommets.
+
+\begin{verbatim}
+cycle = [1, 3, 5, 2, 4, 1]
+\end{verbatim}
+
+\paragraph{Marquage des sommets}
+Les tableaux de booléens utilisés dans PPP ou HDS pour marquer les sommets visités sont implémentés à l’aide de listes Python.
+
+\begin{verbatim}
+marked = [False] * n
+\end{verbatim}
+
+\paragraph{Tas de priorité}
+La structure \textbf{Tas} utilisée dans les algorithmes Prim et HDS est implémentée efficacement à l’aide du module
+\texttt{heapq} de Python.
+
+\begin{verbatim}
+import heapq
+heap = []
+heapq.heappush(heap, (borne, cout, cycle))
+borne, cout, cycle = heapq.heappop(heap)
+\end{verbatim}
+
+Cette traduction permet une implémentation simple, lisible et efficace des algorithmes étudiés, tout en conservant
+leur logique algorithmique.
+
+
+% ==========================================================
+\section{Algorithme du Point le Plus Proche (PPP)}
+
+L’algorithme PPP construit un cycle hamiltonien en partant d’un point initial et en ajoutant successivement 
+le point non inclus le plus proche du cycle courant, jusqu’à ce que tous les points soient inclus.
+
+\begin{algorithm}[H]
+\caption{Algorithme PPP}
+\KwIn{G : GrapheM, s : Entier (point de départ)}
+\KwOut{$c : cycle$ (cycle hamiltonien)}
+\textbf{Var} u, v : Entier\\
+\textbf{Var} min\_dist : Réel\\
+\ \ \ \ \ \ marked : Tableau [1..n] de Booléen\\
+
+$c \leftarrow \emptyset$ \\
+ajouter(c, s)\\
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    $marked[i] \leftarrow Faux$ \\
+}
+$marked[s] \leftarrow Vrai$ \\
+
+\While{$|c| \neq G.n$}{
+    $min\_dist \leftarrow \inf$ \\
+    \For{$i \leftarrow 1$ \KwTo $G.n$}{
+        \If{$\textbf{not } marked[i]$}{
+            $p \leftarrow c$ \\
+            \While{$p \neq NIL$}{
+                \If{$G.M[i, p \uparrow sommet] < min\_dist$}{
+                    $min\_dist \leftarrow G.M[i, p \uparrow sommet]$ \\
+                    $u \leftarrow i$ \\
+                    $v \leftarrow p \uparrow sommet$ \\
+                }
+                $p \leftarrow p \uparrow suiv$ \\
+            }       
+        }
+    }
+    ajouter(c, v, u) \tcp{Ajouter u dans le cycle c après v}
+    $marked[u] \leftarrow Vrai$ \\
+}
+ajouter(c, s) \tcp{Fermer le cycle en revenant au point de départ}
+\Return $c$
+\end{algorithm}
+
+\section{Amélioration de la stratégie du Point le Plus Proche}
+
+Une amélioration possible du coût du cycle obtenu par la procédure PPP consiste à \textbf{décroiser les arêtes qui se croisent}.  
+Soit $(i, j)$ un couple d'entiers dans l'intervalle $[1, n]$ tel que $j \ge i + 2$, et soit le cycle :  
+\[
+c = (PL[1], \dots, PL[i], PL[i+1], \dots, PL[j], PL[j+1], \dots, PL[n]).
+\]  
+Si le décroisement des arêtes $(PL[i], PL[i+1])$ et $(PL[j], PL[j+1])$ réduit la longueur totale du cycle, on transforme $c$ en :  
+\[
+\bar{c} = (PL[1], \dots, PL[i], PL[j], \dots, PL[i+1], PL[j+1], \dots, PL[n]).
+\]
+
+\begin{algorithm}[H]
+\caption{Algorithme OptPPP}
+\KwIn{c : cycle obtenu par PPP}
+\KwOut{c : cycle amélioré}
+
+\textbf{Var} amelioration : Booléen \\
+\ \ \ \ \ \ a, b, d, e : Entier \\
+\ \ \ \ \ \ p, q, r, s : $\uparrow Arrete$ \\
+
+$amelioration \leftarrow Vrai$ \\
+
+\While{amelioration}{
+    $amelioration \leftarrow Faux$ \\
+    $p \leftarrow c$ \\
+    $q \leftarrow p \uparrow\ suiv$ \\
+    \While{$q \uparrow\ suiv \neq NIL$}{
+    		$r \leftarrow q \uparrow\ suiv$ \\
+   		$s \leftarrow r \uparrow\ suiv$ \\
+        \While{$s \neq NIL$}{
+            $a \leftarrow p \uparrow\ sommet$, $b \leftarrow q \uparrow\ sommet$ \\
+            $d \leftarrow r \uparrow\ sommet$, $e \leftarrow s \uparrow\ sommet$ \\
+            \If{$G.M[a, d] + G.M[b, e] < G.M[a, b] + G.M[d, e]$}{
+                \tcp{Décroisement avantageux}
+                \tcp{Inverser le segment de c compris entre les cellules q et r}
+                inverser(c, q, r) \\
+                $amelioration \leftarrow Vrai$ \\
+            }
+            $r \leftarrow s$ \\
+        		$s \leftarrow s \uparrow\ suiv$ \\
+        }
+        $p \leftarrow q$ \\
+        $q \leftarrow q \uparrow\ suiv$ \\
+    }
+}
+\Return $c$
+\end{algorithm}
+
+\noindent
+Cet algorithme répète les opérations de décroisement tant qu’il existe des couples d’arêtes croisées dont le remplacement réduit la longueur du cycle.  
+Il permet ainsi d’améliorer efficacement la solution initiale fournie par PPP.
+
+\section{Stratégie par l’arbre couvrant de poids minimum}
+
+\subsection{Parcours en profondeur (DFS) avec backtracking}
+
+\begin{algorithm}[H]
+\caption{Visite en profondeur}
+\KwIn{GrapheTL $G$, Entier $origine$}
+\KwOut{Tableaux $couleurs$, $\pi$, $P$, $S$, $P^*$, $S^*$ ; Entiers $i_p$, $i_s$}
+
+\textbf{Var} v : Entier\\
+\ \ \ \ \ \ p : $\uparrow$ Cellule\\
+
+$couleurs[origine] \leftarrow GRIS$\\
+$i_p \leftarrow i_p + 1$\\
+$P[origine] \leftarrow i_p$\\
+$P^*[i_p] \leftarrow origine$\\
+$p \leftarrow G.L[origine]$\\
+
+\While{$p \neq \text{NIL}$}{
+    $v \leftarrow p \uparrow sommet$\\
+    \If{$couleurs[v] = BLANC$}{
+        $\pi[v] \leftarrow origine$\\
+        \textbf{Visiter\_Profondeur}(G, v, couleurs, $\pi$, P, S, $P^*$, $S^*$, $i_p$, $i_s$)\\
+    }
+    $p \leftarrow p \uparrow suiv$\\
+}
+
+$couleurs[origine] \leftarrow NOIR$\\
+$i_s \leftarrow i_s + 1$\\
+$S[origine] \leftarrow i_s$\\
+$S^*[i_s] \leftarrow origine$\\
+
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{DFS principal (backtracking)}
+\KwIn{GrapheTL $G$}
+\KwOut{Tableaux $\pi$, $P$, $S$, $P^*$, $S^*$}
+
+$\textbf{Var} i, i_p, i_s : Entier$\\
+\ \ \ \ \ \ couleurs : Tableau[1..G.n] de COULEUR\\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    $couleurs[i] \leftarrow BLANC$\\
+    $\pi[i] \leftarrow -1$\\
+    $P[i] \leftarrow 0$\\
+    $S[i] \leftarrow 0$\\
+    $P^*[i] \leftarrow 0$\\
+    $S^*[i] \leftarrow 0$\\
+}
+
+$i_p \leftarrow 0$\\
+$i_s \leftarrow 0$\\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    \If{$couleurs[i] = BLANC$}{
+        \textbf{Visiter\_Profondeur}(G, i, couleurs, $\pi$, P, S, $P^*$, $S^*, i_p, i_s$)\\
+    }
+}
+\end{algorithm}
+
+% =======================
+\subsection{Algorithme de Prim efficace}
+
+\begin{algorithm}[H]
+\caption{Prim efficace}
+\KwIn{$G$ : GrapheD, $r$ : Entier}
+\KwOut{$\pi$ : Tableau[1..n] d’Entier}
+
+\textbf{Var} t, i : Entier\\
+\ \ \ \ \ \ p : $\uparrow$ Arrete\\  
+
+$T.dern \leftarrow G.n$ \\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+	$G.cle[i] \leftarrow +\infty$ \\
+	$G.\pi[i] \leftarrow -1$ \\
+	$G.NoeudTas[i] \leftarrow i$ \\
+	$T.Tab[i] \leftarrow i$ \\
+}
+
+$G.cle[r] \leftarrow 0$ \\
+
+\While{$T.dern \geq 1$}{
+	$t \leftarrow T.Tab[1]$ \\
+	$\textbf{Echange}(1, T.dern, G, T)$ \\
+	$T.dern \leftarrow T.dern - 1$ \\
+	$\textbf{Verslebas}(1, G, T)$ \\
+
+	$p \leftarrow G.L[t]$ \\
+
+	\While{$p \neq \text{NIL}$}{
+		\If{$G.NoeudTas[p \uparrow sommet] \leq T.dern$
+		\textbf{et} $p \uparrow poids < G.cle[p \uparrow sommet]$}{
+			$G.cle[p \uparrow sommet] \leftarrow p \uparrow poids$ \\
+			$G.\pi[p \uparrow sommet] \leftarrow t$ \\
+			$\textbf{Verslehaut}(G.NoeudTas[p \uparrow sommet], G, T)$ \\
+		}
+		$p \leftarrow p \uparrow suiv$ \\
+	}
+}
+\end{algorithm}
+
+% =======================
+\subsection{PVCPrim}
+
+\begin{algorithm}[H]
+\caption{PVCPrim : approximation du PVC par arbre couvrant}
+\KwIn{$G$ : Graphe complet valué, $Q$ : Entier}
+\KwOut{$C$ : Cycle hamiltonien}
+
+\textbf{Var} $\pi, P, P^*, S, S^*$ : Tableau[1..n] d’Entier\\
+\ \ \ \ \ \ $T$ : GrapheTL\\
+\ \ \ \ \ \ $i$ : Entier\\
+
+$\pi \leftarrow$ \textbf{Prim}(G, Q)\\
+$C \leftarrow \emptyset$\\
+
+\For{$i \leftarrow 1$ \KwTo $n$}{
+	\If{$\pi[i] > -1$}
+	{
+    		ajouter($T.L[i],\ \pi[i]$)\\
+    		ajouter($T.L[\pi[i]],\ i$)\\
+    	}	
+}
+
+$\textbf{backtrack}(T, \pi, P, S, P^*, S^*$)\\
+
+$C \leftarrow \emptyset$\\
+\For{$i \leftarrow 1$ \KwTo $n$}{
+    ajouter($C, P^*[i]$)\\
+}
+ajouter($C, P^*[1]$)\\
+
+\Return $C$
+\end{algorithm}
+
+
+% ==========================================================
+\section{Algorithme exact HDS}
+
+\subsection{Heuristique de la demi-somme}
+
+L’heuristique de la demi-somme fournit une borne inférieure du coût restant à parcourir.
+Pour chaque sommet on considère la demi-somme des deux plus petites arêtes incidentes admissibles.
+Cette heuristique fournit une borne inférieure admissible, car chaque sommet du cycle final devra être incident à exactement deux arêtes.
+
+\begin{algorithm}[H]
+\caption{Heuristique de la demi-somme}
+\KwIn{GrapheM $G$, $\uparrow Arrete$ $c$}
+\KwOut{Entier borne}
+\textbf{Var} k, i : Entier\\
+\ \ \ \ \ \ distances : Tableau[1..n] de réels\\
+\ \ \ \ \ \ p, q, r : $\uparrow Arrete$\\  
+$borne \leftarrow 0$ \\
+$k \leftarrow |c|$ \\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    \If{$k = 1\ \textbf{or}\ \textbf{not}\ i \in sommets(c)$}{
+        $distances \leftarrow tri(G.M[i])$ \\
+        $borne \leftarrow borne + distances[2] + distances[3]$ \\
+    }
+}
+
+$p \leftarrow c$ \\
+$q \leftarrow p \uparrow suiv$ \\
+\While{$q \neq \text{NIL}$}{
+    \If{p = c \textbf{ou}\ $q \uparrow suiv = \text{NIL}$}{
+    		$borne \leftarrow borne + G.M[p \uparrow sommet, q \uparrow sommet]$ \\
+    		\If{$q \uparrow suiv = \text{NIL}$}{
+    			$distances \leftarrow tri(G.M[q \uparrow sommet])$ \\
+    		}
+    		\Else{
+    			$distances \leftarrow tri(G.M[p \uparrow sommet])$ \\
+    		}	
+    		\If{$distances[2] = G.M[p \uparrow sommet, q \uparrow sommet]$}{
+    			$borne \leftarrow borne + distances[3]$
+    		}
+    		\Else{
+    			$borne \leftarrow borne + distances[2]$
+    		}
+    }
+    \Else{
+		$r \leftarrow q \uparrow suiv$ \\
+		$borne \leftarrow borne + G.M[p \uparrow sommet, q \uparrow sommet] + G.M[q \uparrow sommet, r \uparrow sommet]$ \\ 
+    }
+    $p \leftarrow q$ \\
+    $q \leftarrow q \uparrow suiv$ \\
+}
+
+\Return $\frac{borne}{2}$
+\end{algorithm}
+
+\subsection{Algorithme HDS}
+
+L’algorithme HDS explore l’espace des solutions partielles en privilégiant les nœuds possédant la plus petite borne inférieure.
+
+\begin{algorithm}[H]
+\caption{Algorithme HDS}
+\KwIn{GrapheM $G$}
+\KwOut{$best\_solution : \uparrow Arrete$, $best\_cost$\ : Réel}
+\textbf{Var} u, v : Entier\\
+\ \ \ \ \ \ borne, h, $new\_cost$, cost : Réel\\
+\ \ \ \ \ \ T : Tas\\
+\ \ \ \ \ \ c, $new\_c$ : $\uparrow Arrete$\\
+
+$best\_cost \leftarrow +\infty$ \\
+$best\_solution \leftarrow \text{NIL}$ \\
+$T \leftarrow \emptyset$ \\
+$c \leftarrow \emptyset$ \\
+ajouter(c, 1)\\
+$cost \leftarrow 0$ \\
+
+$borne \leftarrow$ Heuristique\_Demi\_Somme$(G, c)$ \\
+\textbf{Entasser}(T, $\langle borne, cost, c \rangle$)\\
+
+\While{$T \neq \emptyset$}{
+    \textbf{Détasser}(T, $\langle borne, cost, c \rangle$)\\
+    \If{$borne < best\_cost$}{
+    
+    \If{$|c| = G.n$}{
+        $total\_cost \leftarrow cost + G.M[\text{dernier}(c), 1]$ \\
+        \If{$total\_cost < best\_cost$}{
+            $best\_cost \leftarrow total\_cost$ \\
+            $best\_solution \leftarrow c$
+        }
+    }
+    \Else{
+    $u \leftarrow$ dernier(c) \\
+    \For{$v \leftarrow 1$ \KwTo $G.n$}{
+        \If{$\textbf{not}\ v \in sommets(c)$}{
+            $new\_cost \leftarrow cost + G.M[u, v]$ \\
+            $new\_c \leftarrow c$ \\
+            ajouter($new\_c$, v) \\
+            $h \leftarrow$ Heuristique\_Demi\_Somme$(G,\ new\_c)$ \\
+            \If{$h < best\_cost$}{
+                \textbf{Entasser}(T,\  $\langle h, new\_cost,\ new\_c \rangle$)
+            }
+        }
+    }
+    }
+    }
+}
+
+\Return $(best\_solution, best\_cost)$
+\end{algorithm}
+
+% ==========================================================
+\section{Étude statistique des heuristiques}
+
+Pour évaluer la qualité des heuristiques, nous avons généré 100 ensembles de 10 points tirés aléatoirement dans $[0, 1]^2$
+et appliqué les algorithmes \textbf{PPP}, \textbf{OptPPP} et \textbf{PVCPrim}.
+Nous avons calculé pour chaque algorithme la longueur moyenne du cycle obtenu et
+les gains relatifs entre les méthodes.
+
+\subsection{Résultats numériques}
+
+Les résultats moyens obtenus sont présentés dans le tableau ci-dessous :
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+Algorithme & Longueur moyenne & Gain par rapport à PPP (\%) & Gain par rapport à OptPPP (\%) \\
+\hline
+PPP & 3.483 & - & - \\
+OptPPP & 3.193 & 7.95 & - \\
+PVCPrim & 3.422 & - & -9.60 \\
+HDS (exact) & 2.907 & - & - \\
+\hline
+\end{tabular}
+\caption{Longueurs moyennes et gains des algorithmes sur 100 essais.}
+\end{table}
+
+\subsection{Représentation graphique}
+
+La figure ci-dessous montre la répartition des longueurs obtenues par les différentes méthodes.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.8\textwidth]{../figures/hists.png}
+\caption{Histogrammes des longueurs des cycles obtenus par les 4 algorithmes.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.8\textwidth]{../figures/cmp.png}
+\caption{Comparaison des 3 méthodes approximative avec HDS.}
+\end{figure}
+
+\subsection{Analyse des résultats}
+
+\begin{itemize}
+    \item L'amélioration apportée par \textbf{OptPPP} par rapport à \textbf{PPP} est significative,
+          avec un gain moyen de 7.95 \%.
+    \item \textbf{PVCPrim} permet de réduire la longueur du cycle obtenu par \textbf{PPP} mais elle donne de moins bons résultats que \textbf{OptPPP} avec des cycles 1.5 \% plus longs.
+    \item L'algorithme exact \textbf{HDS} fournit la solution optimale, ce qui permet de comparer
+          la qualité des heuristiques.
+    \item L'étude statistique confirme que les heuristiques combinées à des améliorations locales
+          offrent un bon compromis entre précision et temps de calcul.
+\end{itemize}
+
+% ==========================================================
+\section{Analyse de la complexité}
+
+Dans cette section, nous analysons la complexité temporelle des différents algorithmes
+implémentés pour la résolution du Problème du Voyageur de Commerce (PVC).
+On note $n$ le nombre de points à visiter.
+
+\subsection{Heuristique du Plus Proche Point (PPP)}
+
+L’algorithme \textbf{PPP} construit le cycle en sélectionnant, à chaque étape,
+le point non encore visité le plus proche du point courant.
+
+À chaque itération, l’algorithme parcourt l’ensemble des points non visités afin
+de déterminer le plus proche voisin, ce qui nécessite un temps en $O(n)$.
+Cette opération est répétée pour chacun des $n$ sommets.
+
+\[
+\boxed{\text{Complexité temporelle de PPP : } O(n^2)}
+\]
+
+La complexité spatiale est dominée par le stockage de la matrice des distances,
+soit $O(n^2)$.
+
+\subsection{Amélioration OptPPP}
+
+L’algorithme \textbf{OptPPP} améliore la solution fournie par PPP en éliminant les
+croisements d’arêtes par des opérations locales de type 2-opt.
+
+Chaque amélioration potentielle consiste à tester des paires d’arêtes,
+ce qui conduit à un nombre de combinaisons en $O(n^2)$.
+Dans le pire des cas, ces opérations peuvent être répétées $O(n)$ fois
+jusqu’à stabilisation de la solution.
+
+\[
+\boxed{\text{Complexité temporelle de OptPPP : } O(n^3)}
+\]
+
+En pratique, le nombre d’itérations est souvent bien inférieur,
+ce qui rend l’algorithme utilisable pour des tailles de problèmes modérées.
+
+\subsection{Approximation par arbre couvrant minimum (PVCPrim)}
+
+L’algorithme \textbf{PVCPrim} repose sur la construction d’un arbre couvrant
+de poids minimum à l’aide de l’algorithme de Prim, puis sur un parcours en profondeur
+de l’arbre obtenu afin de construire un cycle hamiltonien.
+
+La complexité de l’algorithme de Prim, implémenté à l’aide d’un tas binaire,
+est en $O(n \log n)$.
+Le parcours en profondeur s’effectue en temps linéaire $O(n)$.
+
+\[
+\boxed{\text{Complexité temporelle de PVCPrim : } O(n \log n)}
+\]
+
+La complexité spatiale est dominée par la structure du tas et la matrice des distances,
+soit $O(n^2)$.
+
+\subsection{Algorithme exact HDS (Branch and Bound)}
+
+L’algorithme \textbf{HDS} repose sur une exploration systématique de l’espace des
+permutations possibles des sommets, combinée à une stratégie de \textit{Branch and Bound}
+utilisant une borne inférieure basée sur la demi-somme des arêtes.
+
+Dans le pire des cas, l’algorithme doit explorer l’ensemble des permutations possibles,
+soit $(n-1)!$, ce qui conduit à une complexité exponentielle.
+
+\[
+\boxed{\text{Complexité temporelle de HDS : } O(n!)}
+\]
+
+Toutefois, en pratique, l’utilisation de bornes efficaces permet de réduire
+considérablement l’espace de recherche, rendant l’algorithme exploitable pour
+des instances de petite taille.
+
+\subsection{Synthèse des complexités}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+Algorithme & Complexité temporelle & Nature \\ \hline
+PPP & $O(n^2)$ & Heuristique \\ \hline
+OptPPP & $O(n^3)$ & Heuristique améliorée \\ \hline
+PVCPrim & $O(n \log n)$ & Approximation \\ \hline
+HDS & $O(n!)$ & Exact \\ \hline
+\end{tabular}
+\caption{Complexité temporelle des algorithmes étudiés.}
+\end{table}
+
+
+% ==========================================================
+\section{Conclusion}
+
+Dans ce projet, nous avons étudié plusieurs approches pour résoudre le problème du voyageur de commerce,
+un problème d’optimisation combinatoire connu pour sa complexité.
+
+Les heuristiques constructives comme \textbf{PPP} permettent d’obtenir rapidement des solutions valides,
+tandis que \textbf{OptPPP} améliore significativement leur qualité grâce à des opérations de décroisement.
+La stratégie \textbf{PVCPrim}, basée sur un arbre couvrant de poids minimum suivi d’un parcours en profondeur,
+fournit une approximation efficace avec un bon compromis entre coût et temps de calcul.
+
+Enfin, l’algorithme \textbf{HDS}, fondé sur le principe du \textit{Branch and Bound} et utilisant l’heuristique
+de la demi-somme comme borne inférieure, permet d’obtenir une solution optimale au prix d’une complexité
+exponentielle dans le pire des cas.
+
+L’ensemble de ces méthodes illustre les compromis classiques entre rapidité, précision et complexité,
+et montre l’intérêt de combiner heuristiques et algorithmes exacts selon la taille et les contraintes
+du problème à résoudre.
+
+\end{document}

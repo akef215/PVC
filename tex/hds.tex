@@ -1,0 +1,171 @@
+\documentclass[11pt,a4paper]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{algorithm2e}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+
+% =======================
+% Document
+% =======================
+\begin{document}
+
+\title{Algorithme HDS pour le Problème du Voyageur de Commerce}
+\author{Mohamed Elakef Zenagui}
+\date{}
+\maketitle
+
+\section{Introduction}
+
+Le problème du voyageur de commerce (\textit{Travelling Salesman Problem}, TSP) consiste à déterminer une tournée hamiltonienne
+de coût minimal passant exactement une fois par chaque sommet d’un graphe complet valué.
+Ce problème est NP-difficile.
+
+Dans ce travail, nous présentons un algorithme exact basé sur le principe du \textit{Branch and Bound},
+utilisant une borne inférieure obtenue par l’heuristique de la demi-somme, noté \textbf{HDS}.
+
+\section{Structures de données}
+
+CONSTANTE \textbf{n} = 10\\
+\newline
+TYPE \textbf{Arrete} = enregistrement\\
+\ \ $sommet$ : entier \\
+\ \ $suiv$ : $\uparrow$ Arrete \\
+FIN\\
+\newline
+TYPE \textbf{GrapheM} = enregistrement\\
+\ \ n : entier\\
+\ \ M : Tableau[1..n][1..n] de \textbf{réel}\\
+FIN\\
+\newline
+TYPE \textbf{NoeudTas} = enregistrement\\
+\ \ borne : réel\\
+\ \ cout : réel\\
+\ \ cycle : $\uparrow$ Arrete\\
+\ \ suiv : $\uparrow$ NoeudTas\\
+FIN\\
+
+TYPE \textbf{Tas} = $\uparrow \textbf{NoeudTas}$\\
+\newline
+
+\section{Heuristique de la demi-somme}
+
+L’heuristique de la demi-somme fournit une borne inférieure du coût restant à parcourir.
+Pour chaque sommet on considère la demi-somme des deux plus petites arêtes incidentes admissibles.
+
+\begin{algorithm}[H]
+\caption{Heuristique de la demi-somme}
+\KwIn{GrapheM $G$, $\uparrow Arrete$ $c$}
+\KwOut{Entier borne}
+\textbf{Var} k, i : Entier\\
+\ \ \ \ \ \ distances : Tableau[1..n] de réels\\
+\ \ \ \ \ \ p, q, r : $\uparrow Arrete$\\  
+$borne \leftarrow 0$ \\
+$k \leftarrow |c|$ \\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    \If{$k = 1\ \textbf{or}\ \textbf{not}\ i \in sommets(c)$}{
+        $distances \leftarrow tri(G.M[i])$ \\
+        $borne \leftarrow borne + distances[2] + distances[3]$ \\
+    }
+}
+
+$p \leftarrow c$ \\
+$q \leftarrow p \uparrow suiv$ \\
+\While{$q \neq \text{NIL}$}{
+    \If{p = c \textbf{ou}\ $q \uparrow suiv = \text{NIL}$}{
+    		$borne \leftarrow borne + G.M[p \uparrow sommet, q \uparrow sommet]$ \\
+    		\If{$q \uparrow suiv = \text{NIL}$}{
+    			$distances \leftarrow tri(G.M[q \uparrow sommet])$ \\
+    		}
+    		\Else{
+    			$distances \leftarrow tri(G.M[p \uparrow sommet])$ \\
+    		}	
+    		\If{$distances[2] = G.M[p \uparrow sommet, q \uparrow sommet]$}{
+    			$borne \leftarrow borne + distances[3]$
+    		}
+    		\Else{
+    			$borne \leftarrow borne + distances[2]$
+    		}
+    }
+    \Else{
+		$r \leftarrow q \uparrow suiv$ \\
+		$borne \leftarrow borne + G.M[p \uparrow sommet, q \uparrow sommet] + G.M[q \uparrow sommet, r \uparrow sommet]$ \\ 
+    }
+    $p \leftarrow q$ \\
+    $q \leftarrow q \uparrow suiv$ \\
+}
+
+\Return $\frac{borne}{2}$
+\end{algorithm}
+
+\section{Algorithme HDS}
+
+L’algorithme HDS explore l’espace des solutions partielles en privilégiant les nœuds possédant la plus petite borne inférieure.
+
+\begin{algorithm}[H]
+\caption{Algorithme HDS}
+\KwIn{GrapheM $G$}
+\KwOut{$\uparrow Arrete$ $best\_solution$, Réel $best\_cost$}
+\textbf{Var} u, v, n : Entier\\
+\ \ \ \ \ \ borne, h : Réel\\
+\ \ \ \ \ \ T : Tas\\
+\ \ \ \ \ \ c, $new\_c$ : $\uparrow Arrete$\\
+
+$n \leftarrow |M|$ \\
+$best\_cost \leftarrow +\infty$ \\
+$best\_solution \leftarrow \text{NIL}$ \\
+$T \leftarrow \emptyset$ \\
+$c \leftarrow \emptyset$ \\
+ajouter(c, 1)\\
+$cost \leftarrow 0$ \\
+
+$borne \leftarrow$ Heuristique\_Demi\_Somme$(M, c)$ \\
+\textbf{Entasser}(T, $\langle borne, cost, c \rangle$)\\
+
+\While{$T \neq \text{NIL}$}{
+    \textbf{Détasser}(T, $\langle borne, cost, c \rangle$)\\
+    \If{$borne < best\_cost$}{
+    
+    \If{$|c| = n$}{
+        $total\_cost \leftarrow cost + M[\text{dernier}(c)][1]$ \\
+        \If{$total\_cost < best\_cost$}{
+            $best\_cost \leftarrow total\_cost$ \\
+            $best\_solution \leftarrow c$
+        }
+    }
+    \Else{
+    $u \leftarrow$ dernier(c) \\
+    \For{$v \leftarrow 1$ \KwTo $n$}{
+        \If{$\textbf{not}\ v \in sommets(c)$}{
+            $new\_cost \leftarrow cost + M[u][v]$ \\
+            $new\_c \leftarrow c$ \\
+            ajouter($new\_c$, v) \\
+            $h \leftarrow$ Heuristique\_Demi\_Somme$(M,\ new\_c)$ \\
+            \If{$h < best\_cost$}{
+                \textbf{Entasser}(T,\  $\langle h, new\_cost,\ new\_c \rangle$)
+            }
+        }
+    }
+    }
+    }
+}
+
+\Return $(best\_solution, best\_cost)$
+\end{algorithm}
+
+\section{Conclusion}
+
+L’algorithme HDS est un algorithme exact pour la résolution du TSP.
+L’utilisation de l’heuristique de la demi-somme permet d’obtenir une borne inférieure admissible,
+réduisant considérablement l’espace de recherche par élagage.
+
+\end{document}

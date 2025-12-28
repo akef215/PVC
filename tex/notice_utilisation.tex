@@ -1,0 +1,172 @@
+\documentclass[11pt,a4paper]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=2cm}
+
+% =======================
+% Paramètres pour le code
+% =======================
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true
+}
+
+% =======================
+% Titre
+% =======================
+\title{Notice d'utilisation de la classe PVC\_points}
+\author{ZENAGUI MOHAMEDELAKEF}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+La classe \texttt{PVC\_points} permet de résoudre le \textbf{Problème du Voyageur de Commerce (PVC)} sur un ensemble de points 2D.  
+Elle fournit plusieurs algorithmes pour générer un cycle optimal ou approché :
+
+\begin{itemize}
+    \item \textbf{PPP} : Point le plus proche.
+    \item \textbf{OptPPP} : PPP optimisé avec l'algorithme 2-opt.
+    \item \textbf{OptPrim} : Arbre couvrant minimal + parcours DFS pour générer un cycle.
+    \item \textbf{HDS} : Heuristique de la demi-somme (branch-and-bound).
+\end{itemize}
+
+\section{Installation}
+Pour utiliser la classe, installer les packages nécessaires :
+\begin{lstlisting}
+pip install numpy matplotlib
+\end{lstlisting}
+
+\section{Création d'un objet PVC\_points}
+\begin{lstlisting}
+from src.PVC_points import PVC_points
+
+pvc = PVC_points()
+\end{lstlisting}
+
+\section{Chargement ou génération des points}
+
+\subsection{Depuis une liste de points}
+\begin{lstlisting}
+points = [(0,0), (1,2), (3,1), (4,5)]
+pvc.charger_de_liste(points)
+\end{lstlisting}
+
+\subsection{Depuis un fichier texte}
+Le fichier doit contenir un point par ligne au format \texttt{(x, y)} :
+\begin{lstlisting}
+(0,0)
+(1,2)
+(3,1)
+(4,5)
+\end{lstlisting}
+\begin{lstlisting}
+pvc.charger_de_fichier("data/points.txt")
+\end{lstlisting}
+
+\subsection{Générer des points aléatoires en mémoire}
+\begin{lstlisting}
+points_alea = PVC_points.generer_points(10)  # 10 points aleatoires
+pvc.charger_de_liste(points_alea)
+\end{lstlisting}
+
+\subsection{Générer un fichier de points aléatoires}
+\begin{lstlisting}
+PVC_points.generer_fichier(10, nom="points_alea")
+# cree ./data/points_alea.txt
+\end{lstlisting}
+
+\section{Algorithmes disponibles}
+Les méthodes utilisent un \textbf{point de départ aléatoire} défini lors du chargement des points.
+
+\subsection{PPP - Point le plus proche}
+\begin{lstlisting}
+cycle_ppp = pvc.PPP()
+print("Cycle PPP :", cycle_ppp)
+\end{lstlisting}
+
+\subsection{OptPPP - PPP optimisé 2-opt}
+\begin{lstlisting}
+cycle_opt = pvc.OptPPP()
+print("Cycle OptPPP :", cycle_opt)
+\end{lstlisting}
+
+\subsection{OptPrim - Arbre couvrant minimal + DFS}
+\begin{lstlisting}
+cycle_prim = pvc.OptPrim()
+print("Cycle OptPrim :", cycle_prim)
+\end{lstlisting}
+
+\subsection{HDS - Heuristique demi-somme}
+\begin{lstlisting}
+cycle_hds = pvc.HDS()
+print("Cycle HDS :", cycle_hds)
+\end{lstlisting}
+
+\section{Longueur d'un cycle}
+\begin{lstlisting}
+longueur = pvc.longueur(cycle_ppp)
+print("Longueur du cycle PPP :", longueur)
+\end{lstlisting}
+
+\section{Tracer un cycle}
+\begin{lstlisting}
+PVC_points.plot_cycle(cycle_ppp, titre="Cycle PPP")
+PVC_points.plot_cycle(cycle_opt, titre="Cycle OptPPP")
+PVC_points.plot_cycle(cycle_hds, titre="Cycle HDS")
+\end{lstlisting}
+
+\section{Exemple complet}
+\begin{lstlisting}
+from src.PVC_points import PVC_points
+
+points = PVC_points.generer_points(15)
+pvc = PVC_points()
+pvc.charger_de_liste(points)
+
+cycle_ppp = pvc.PPP()
+cycle_opt = pvc.OptPPP()
+cycle_hds = pvc.HDS()
+
+print("PPP :", cycle_ppp)
+print("OptPPP :", cycle_opt)
+print("HDS :", cycle_hds)
+
+print("Longueur PPP :", pvc.longueur(cycle_ppp))
+print("Longueur OptPPP :", pvc.longueur(cycle_opt))
+print("Longueur HDS :", pvc.longueur(cycle_hds))
+
+PVC_points.plot_cycle(cycle_ppp, "Cycle PPP")
+PVC_points.plot_cycle(cycle_opt, "Cycle OptPPP")
+PVC_points.plot_cycle(cycle_hds, "Cycle HDS")
+\end{lstlisting}
+
+\section{Conseils d'utilisation}
+\begin{itemize}
+    \item Le nombre minimal de points pour PPP, OptPPP et HDS est \textbf{3}.
+    \item L'algorithme HDS peut être très lent pour \textbf{plus de 12 points}.
+    \item La variable \texttt{seed\_} garantit un point de départ fixe pour PPP et OptPPP si les points ne sont pas rechargés.
+    \item Les cycles sont automatiquement fermés lors du tracé pour visualiser la tournée complète.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,240 @@
+\documentclass[11pt,a4paper]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{algorithm2e}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+
+% =======================
+% Document
+% =======================
+\begin{document}
+
+\title{Stratégie par l’arbre couvrant de poids minimum}
+\author{Mohamed Elakef Zenagui}
+\date{}
+\maketitle
+
+\section{Introduction}
+
+Le problème du voyageur de commerce (\textit{Travelling Salesman Problem}, TSP) consiste à déterminer une tournée hamiltonienne
+de coût minimal passant exactement une fois par chaque sommet d’un graphe complet valué.
+Ce problème est NP-difficile.
+
+Dans ce travail, nous présentons un algorithme exact basé sur le principe du \textit{Branch and Bound},
+utilisant une borne inférieure obtenue par l’heuristique de la demi-somme, noté \textbf{HDS}.
+
+\section{Structures de données}
+
+CONSTANTE \textbf{n} = 10\\
+\newline
+TYPE \textbf{Arrete} = enregistrement\\
+\ \ $sommet$ : entier \\
+\ \ $poids$ : réel \\
+\ \ $suiv$ : $\uparrow$ Arrete \\
+FIN\\
+\newline
+TYPE \textbf{GrapheD} = enregistrement\\
+\ \ n : entier\\
+\ \ L : Tableau[1..n] de $\uparrow Arrete$\\
+\ \ clé : Tableau[1..n] de $\textbf{réel}$\\
+\ \ $\pi$ : Tableau[1..n] d'$ \textbf{entier}$\\
+\ \ NoeudTas : Tableau[1..n] d'$ \textbf{entier}$\\
+FIN\\
+\newline
+TYPE \textbf{Tas} = enregistrement\\
+\ \ dern : entier\\
+\ \ Tab : Tableau[1..n] d'$ \textbf{entier}$\\
+FIN\\
+\newline
+
+TYPE \textbf{Cellule} = enregistrement\\
+\ \ sommet : entier \hfill // sommet courant\\
+\ \ suiv : $\uparrow$ Cellule \hfill // cellule suivante\\
+FIN\\
+\newline
+
+TYPE \textbf{Acellule} = $\uparrow$ Cellule\\
+\newline
+
+TYPE \textbf{GrapheTL} = enregistrement\\
+\ \ n : entier \hfill // nombre de sommets\\
+\ \ L : Tableau[1..n] de Acellule \hfill // listes de successeurs\\
+FIN\\
+\newline
+
+TYPE \textbf{COULEUR} = (BLANC, GRIS, NOIR)
+
+\section{Parcours en profondeur}
+
+\begin{algorithm}[H]
+\caption{Visite en profondeur}
+\KwIn{GrapheTL $G$, Entier $origine$}
+\KwOut{Tableau $couleurs[1..n]$, $pi[1..n]$, $P[1..n]$, $S[1..n]$}
+\KwOut{Tableau $P^*[1..n]$, $S^*[1..n]$}
+\KwOut{Entiers $i_p$, $i_s$}
+
+\textbf{Var} v : Entier\\
+\ \ \ \ \ \ p : Acellule\\
+
+$couleurs[origine] \leftarrow GRIS$\\
+$i_p \leftarrow i_p + 1$\\
+$P[origine] \leftarrow i_p$\\
+$P^*[i_p] \leftarrow origine$\\
+$p \leftarrow G.L[origine]$\\
+
+\While{$p \neq \text{NIL}$}{
+    $v \leftarrow p \uparrow sommet$\\
+    \If{$couleurs[v] = BLANC$}{
+        $pi[v] \leftarrow origine$\\
+        \textbf{Visiter\_Profondeur}(G, v, couleurs, pi, P, S, $P^*$, $S^*$, $i_p$, $i_s$)\\
+    }
+    $p \leftarrow p \uparrow suiv$\\
+}
+
+$couleurs[origine] \leftarrow NOIR$\\
+$i_s \leftarrow i_s + 1$\\
+$S[origine] \leftarrow i_s$\\
+$S^*[i_s] \leftarrow origine$\\
+
+\end{algorithm}
+
+\section{Algorithme principal (backtracking)}
+
+\begin{algorithm}[H]
+\caption{Parcours en profondeur avec backtracking}
+\KwIn{GrapheTL $G$}
+\KwOut{Tableaux $pi$, $P$, $S$, $P^*$, $S^*$}
+
+$\textbf{Var} i, i_p, i_s : Entier$\\
+\ \ \ \ \ \ couleurs : Tableau[1..G.n] de COULEUR\\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    $couleurs[i] \leftarrow BLANC$\\
+    $pi[i] \leftarrow -1$\\
+    $P[i] \leftarrow 0$\\
+    $S[i] \leftarrow 0$\\
+    $P^*[i] \leftarrow 0$\\
+    $S^*[i] \leftarrow 0$\\
+}
+
+$i_p \leftarrow 0$\\
+$i_s \leftarrow 0$\\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+    \If{$couleurs[i] = BLANC$}{
+        \textbf{Visiter\_Profondeur}(G, i, couleurs, pi, P, S, $P^*$, $S^*$, $i_p$, $i_s$)\\
+    }
+}
+
+\end{algorithm}
+
+\section{Version optimal du Prim}
+
+L’heuristique de la demi-somme fournit une borne inférieure du coût restant à parcourir.
+Pour chaque sommet on considère la demi-somme des deux plus petites arêtes incidentes admissibles.
+
+\begin{algorithm}[H]
+\caption{Prim Efficace}
+\KwIn{G : GrapheD,\ r : Entier}
+\KwOut{$\pi$ : Tableau[1..n] d'Entier}
+\textbf{Var} t, i : Entier\\
+\ \ \ \ \ \ p : $\uparrow Arrete$\\  
+$T.dern \leftarrow 0$ \\
+
+\For{$i \leftarrow 1$ \KwTo $G.n$}{
+	$G.cle[i] \leftarrow \inf$ \\
+	$G.\pi[i] \leftarrow -1$ \\
+	$G.NoeudTas[i] \leftarrow i$ \\
+	$T.Tab[i] \leftarrow i$ \\
+}
+$G.cle[r] \leftarrow 0$ \\
+\While{$T.dern \geq 1$}{
+    \If{p = c \textbf{ou}\ $q \uparrow suiv = \text{NIL}$}{
+    		$t \leftarrow T.Tab[1]$ \\
+    		$\textbf{Echange}(1, T.dern, G, T)$ \\
+    		$T.dern \leftarrow T.dern - 1$ \\
+    		$\textbf{Verslebas}(1, G, T)$ \\
+    		$p \leftarrow G.L[t]$ \\
+    		\While{$p \neq \text{NIL}$}{
+    			\If{$G.NoeudTas[t] \leq T.dern\ \textbf{et}\ p \uparrow poids < G.cle[p \uparrow sommet]$}{
+    				$G.cle[p \uparrow sommet] \leftarrow p \uparrow poids$ \\
+    				$G.\pi[p \uparrow sommet] \leftarrow t$ \\
+    				$\textbf{Verslehaut}(G.NoeudTas[p \uparrow sommet], G, T)$ \\
+    			}
+			$p \leftarrow p \uparrow suiv$ \\    		
+    		}
+	}
+}
+\end{algorithm}
+
+\section{Algorithme HDS}
+
+L’algorithme HDS explore l’espace des solutions partielles en privilégiant les nœuds possédant la plus petite borne inférieure.
+
+\begin{algorithm}[H]
+\caption{Algorithme HDS}
+\KwIn{GrapheM $G$}
+\KwOut{$\uparrow Arrete$ $best\_solution$, Réel $best\_cost$}
+\textbf{Var} u, v, n : Entier\\
+\ \ \ \ \ \ borne, h : Réel\\
+\ \ \ \ \ \ T : Tas\\
+\ \ \ \ \ \ c, $new\_c$ : $\uparrow Arrete$\\
+
+$n \leftarrow |M|$ \\
+$best\_cost \leftarrow +\infty$ \\
+$best\_solution \leftarrow \text{NIL}$ \\
+$T \leftarrow \emptyset$ \\
+$c \leftarrow \emptyset$ \\
+ajouter(c, 1)\\
+$cost \leftarrow 0$ \\
+
+$borne \leftarrow$ Heuristique\_Demi\_Somme$(M, c)$ \\
+\textbf{Entasser}(T, $\langle borne, cost, c \rangle$)\\
+
+\While{$T \neq \text{NIL}$}{
+    \textbf{Détasser}(T, $\langle borne, cost, c \rangle$)\\
+    \If{$borne < best\_cost$}{
+    
+    \If{$|c| = n$}{
+        $total\_cost \leftarrow cost + M[\text{dernier}(c)][1]$ \\
+        \If{$total\_cost < best\_cost$}{
+            $best\_cost \leftarrow total\_cost$ \\
+            $best\_solution \leftarrow c$
+        }
+    }
+    \Else{
+    $u \leftarrow$ dernier(c) \\
+    \For{$v \leftarrow 1$ \KwTo $n$}{
+        \If{$\textbf{not}\ v \in sommets(c)$}{
+            $new\_cost \leftarrow cost + M[u][v]$ \\
+            $new\_c \leftarrow c$ \\
+            ajouter($new\_c$, v) \\
+            $h \leftarrow$ Heuristique\_Demi\_Somme$(M,\ new\_c)$ \\
+            \If{$h < best\_cost$}{
+                \textbf{Entasser}(T,\  $\langle h, new\_cost,\ new\_c \rangle$)
+            }
+        }
+    }
+    }
+    }
+}
+
+\Return $(best\_solution, best\_cost)$
+\end{algorithm}
+
+\section{Conclusion}
+
+L’algorithme HDS est un algorithme exact pour la résolution du TSP.
+L’utilisation de l’heuristique de la demi-somme permet d’obtenir une borne inférieure admissible,
+réduisant considérablement l’espace de recherche par élagage.
+
+\end{document}
