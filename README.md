@@ -34,21 +34,32 @@ Ce projet implémente plusieurs méthodes pour résoudre le **Problème du Voyag
 
 ## Structure du projet
 
-.
-├── src
-│ ├── PVC.py # Structures et algorithmes principaux
-│ ├── PVC_points.py # Gestion des points et distances
-│ ├── heap.py # Structures et algorithmes du tas, changement de priorité optimal
-├── data # Données de tests et fichiers txt
-├── algorithmes
-│ ├── ppp.pdf
-│ ├── prim.pdf
-│ ├── hds.pdf
-├── exemple_utilisation.ipynb # Notebook d'exemples
-├── statistiques.ipynb # Notebook pour analyse et visualisation
-├── rapport.pdf # Rapport complet
-├── requirements.txt # Dépendances Python
-└── README.md
+
+---
+
+## Description détaillée des dossiers et fichiers
+
+- **src/** : Contient tout le code source Python :
+  - `PVC.py` : Structures de données pour les graphes et cycles, implémentations des algorithmes (PPP, OptPPP, Prim, HDS).
+  - `PVC_points.py` : Gestion des points 2D, calcul de distances, conversion en matrice et wrapper pour exécuter les algorithmes facilement.
+  - `heap.py` : Structures et fonctions pour la gestion de tas et changement de priorité, utilisées par HDS et Prim.
+
+- **data/** : Fichiers de tests, comprenant des ensembles de points aléatoires ou prédéfinis, pouvant être utilisés par les notebooks pour l’analyse.
+
+- **algorithmes/** : Documentation PDF détaillant chaque algorithme implémenté :
+  - `ppp.pdf` : Algorithme Point le Plus Proche.
+  - `prim.pdf` : Algorithme de Prim et sa variante OptPrim.
+  - `hds.pdf` : Algorithme exact HDS (Branch and Bound).
+
+- **exemple_utilisation.ipynb** : # Notebook d'exemples d'utilisation.
+
+- **statistiques.ipynb** : # Notebook pour analyse statistique et visualisation.
+
+- **rapport.pdf** : Rapport complet du projet.
+
+- **requirements.txt** : # Dépendances Python.
+
+- **README.md** : Présente le projet, sa structure, les instructions d’installation et d’utilisation.
 
 
 ---
