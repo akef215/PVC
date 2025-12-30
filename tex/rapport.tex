@@ -20,7 +20,7 @@
 % =======================
 \begin{document}
 
-\title{Résolution du Problème du Voyageur de Commerce}
+\title{Problème du Voyageur de Commerce}
 \author{Mohamed Elakef Zenagui}
 \date{\today}
 \maketitle
@@ -98,38 +98,32 @@ TYPE \textbf{ETAT} = (BLANC, GRIS, NOIR)
 
 \subsection{Traduction en Python}
 
-Les structures de données algorithmiques présentées précédemment peuvent être traduites de manière naturelle en Python,
-en utilisant des structures standards telles que les listes, dictionnaires et files de priorité.
+Les structures de données algorithmiques présentées précédemment peuvent être traduites de manière naturelle en Python, en utilisant des structures standards telles que les listes, dictionnaires et files de priorité.
 
 \paragraph{Graphe matriciel}
-La structure \textbf{GrapheM}, représentant un graphe complet valué par une matrice de distances, peut être implémentée
-en Python par une liste de listes ou une matrice NumPy.
+La structure \textbf{GrapheM}, représentant un graphe complet valué par une matrice de distances, peut être implémentée en Python par une liste de listes ou une matrice NumPy :
 
 \begin{verbatim}
-G = {
-    "n": n,
-    "M": [[float] * n for _ in range(n)]
-}
+import numpy as np
+M = np.zeros((n, n), dtype=float)
 \end{verbatim}
 
 \paragraph{Arêtes et cycles}
-Le type \textbf{Arrete}, utilisé pour représenter un cycle sous forme de liste chaînée, peut être remplacé en Python
-par une simple liste d’entiers contenant l’ordre de visite des sommets.
+Le type \textbf{Arrete}, utilisé pour représenter un cycle sous forme de liste chaînée, peut être remplacé en Python par une simple liste d'entiers contenant l'ordre de visite des sommets :
 
 \begin{verbatim}
 cycle = [1, 3, 5, 2, 4, 1]
 \end{verbatim}
 
 \paragraph{Marquage des sommets}
-Les tableaux de booléens utilisés dans PPP ou HDS pour marquer les sommets visités sont implémentés à l’aide de listes Python.
+Les tableaux de booléens utilisés pour marquer les sommets visités dans PPP ou HDS sont implémentés à l'aide de listes Python :
 
 \begin{verbatim}
 marked = [False] * n
 \end{verbatim}
 
 \paragraph{Tas de priorité}
-La structure \textbf{Tas} utilisée dans les algorithmes Prim et HDS est implémentée efficacement à l’aide du module
-\texttt{heapq} de Python.
+La structure \textbf{Tas} utilisée dans HDS peut être implémentée avec le module \texttt{heapq} de Python :
 
 \begin{verbatim}
 import heapq
@@ -138,8 +132,81 @@ heapq.heappush(heap, (borne, cout, cycle))
 borne, cout, cycle = heapq.heappop(heap)
 \end{verbatim}
 
-Cette traduction permet une implémentation simple, lisible et efficace des algorithmes étudiés, tout en conservant
-leur logique algorithmique.
+Pour l'algorithme de Prim, on peut utiliser un tas spécialisé pour optimiser les mises à jour de priorité :
+
+\begin{verbatim}
+from src.heap import Heap
+H = Heap()
+d = np.ones(self.taille_) * np.inf
+d[source] = 0
+pi = -np.ones(self.taille_, dtype=int)
+
+tas = zip(set(range(self.taille_)), d)
+H.init_heap(tas)
+
+curr_vertex, curr_priority = H.dequeue()
+H.update_priority(vertex, d[vertex])
+\end{verbatim}
+
+\paragraph{Classe PVC}
+La classe \texttt{PVC} implémente le cœur des algorithmes pour le Problème du Voyageur de Commerce (PVC) en programmation orientée objet.  
+Les attributs principaux sont :
+
+\begin{itemize}
+    \item \texttt{sommets\_} : \textit{set} contenant les indices des sommets.
+    \item \texttt{arretes\_} : liste des arêtes du graphe.
+    \item \texttt{taille\_} : nombre de sommets.
+    \item \texttt{M} : matrice des distances (numpy array).
+    \item \texttt{adj\_dict\_} : dictionnaire d’adjacence du graphe.
+\end{itemize}
+
+\begin{verbatim}
+class PVC:
+    def __init__(self):
+        # Structure interne
+        self.sommets_ = set() 
+        self.arretes_ = []
+        self.taille_ = 0
+
+        # Représentations
+        self.M = None
+        self.adj_dict_ = None
+\end{verbatim}
+
+\paragraph{Classe PVC\_points}
+La classe \texttt{PVC\_points} hérite de \texttt{PVC} et ajoute des fonctionnalités pour manipuler des points dans le plan, générer la matrice des distances et encapsuler les algorithmes PPP, OptPPP, PVCPrim et HDS.
+
+\textbf{Attributs principaux} :
+\begin{itemize}
+    \item \texttt{points\_} : liste des points $(x, y)$.
+    \item \texttt{idx\_map\_} : dictionnaire associant chaque point à son indice dans la matrice de distances.
+    \item \texttt{inv\_} : dictionnaire inversant les indices pour récupérer les points.
+    \item \texttt{seed\_} : indice du point de départ pour certaines heuristiques.
+\end{itemize}
+
+\textbf{Méthodes principales} :
+\begin{itemize}
+    \item \texttt{charger\_de\_liste(points)} : charge une liste de points, crée la matrice des distances et initialise les dictionnaires d’indices.
+    \item \texttt{charger\_de\_fichier(fichier)} : lit un fichier texte contenant des points et appelle \texttt{charger\_de\_liste}.
+    \item \texttt{euclidean\_distance(P, Q)} : calcule la distance euclidienne entre deux points.
+    \item \texttt{PPP()}, \texttt{OptPPP()}, \texttt{PVCPrim()}, \texttt{HDS()} : méthodes encapsulant les algorithmes étudiés.
+\end{itemize}
+
+\textbf{Exemple d’utilisation} :
+
+\begin{verbatim}
+from src.PVC_points import PVC_points
+
+pvc = PVC_points()
+points = PVC_points.generer_points(10)  # Génère 10 points aléatoires
+pvc.charger_de_liste(points)
+
+cycle_ppp = pvc.PPP()       # Heuristique du plus proche point
+cycle_opt = pvc.OptPPP()    # Amélioration par décroisement
+cycle_prim = pvc.PVCPrim()  # Approximation par arbre couvrant
+\end{verbatim}
+
+Cette approche POO centralise les données et simplifie l’utilisation des différentes heuristiques tout en conservant la logique algorithmique.
 
 
 % ==========================================================
@@ -499,18 +566,25 @@ Les résultats moyens obtenus sont présentés dans le tableau ci-dessous :
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{|c|c|c|c|c|}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|}
 \hline
-Algorithme & Longueur moyenne & Gain par rapport à PPP (\%) & Gain par rapport à OptPPP (\%) \\
+Algorithme &
+Longueur moyenne &
+Gain / PPP (\%) &
+Gain / OptPPP (\%) &
+Gain / PVCPrim (\%) \\
 \hline
-PPP & 3.483 & - & - \\
-OptPPP & 3.193 & 7.95 & - \\
-PVCPrim & 3.422 & - & -9.60 \\
-HDS (exact) & 2.907 & - & - \\
+PPP & 3.483 & - & -8.65 & -1.79 \\
+OptPPP & 3.193 & 8.65 & - & 7.92 \\
+PVCPrim & 3.422 & 1.79 & -7.92 & - \\
+HDS (exact) & 2.907 & 16.22 & 8.07 & 14.33 \\
 \hline
 \end{tabular}
+}
 \caption{Longueurs moyennes et gains des algorithmes sur 100 essais.}
 \end{table}
+
 
 \subsection{Représentation graphique}
 
@@ -518,27 +592,44 @@ La figure ci-dessous montre la répartition des longueurs obtenues par les diff�
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=0.8\textwidth]{../figures/hists.png}
+\includegraphics[width=0.8\textwidth]{./hists.png}
 \caption{Histogrammes des longueurs des cycles obtenus par les 4 algorithmes.}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=0.8\textwidth]{../figures/cmp.png}
+\includegraphics[width=0.8\textwidth]{./cmp.png}
 \caption{Comparaison des 3 méthodes approximative avec HDS.}
 \end{figure}
 
 \subsection{Analyse des résultats}
 
 \begin{itemize}
-    \item L'amélioration apportée par \textbf{OptPPP} par rapport à \textbf{PPP} est significative,
-          avec un gain moyen de 7.95 \%.
-    \item \textbf{PVCPrim} permet de réduire la longueur du cycle obtenu par \textbf{PPP} mais elle donne de moins bons résultats que \textbf{OptPPP} avec des cycles 1.5 \% plus longs.
-    \item L'algorithme exact \textbf{HDS} fournit la solution optimale, ce qui permet de comparer
-          la qualité des heuristiques.
-    \item L'étude statistique confirme que les heuristiques combinées à des améliorations locales
-          offrent un bon compromis entre précision et temps de calcul.
+    \item Les résultats numériques montrent que l’algorithme \textbf{OptPPP} améliore
+    significativement la solution obtenue par \textbf{PPP}. La longueur moyenne du cycle
+    passe de 3.483 à 3.193, ce qui correspond à un gain moyen de \textbf{8.65 \%} par
+    rapport à \textbf{PPP}.
+
+    \item L’algorithme \textbf{PVCPrim} permet également d’améliorer la solution fournie par
+    \textbf{PPP}, avec une réduction moyenne de \textbf{1.79 \%} de la longueur du cycle.
+    Toutefois, les cycles obtenus par \textbf{PVCPrim} restent en moyenne
+    \textbf{7.92 \% plus longs} que ceux produits par \textbf{OptPPP}, ce qui montre que les
+    améliorations locales sont plus efficaces dans ce contexte.
+
+    \item L’algorithme exact \textbf{HDS} fournit la solution optimale du problème.
+    Il permet d’obtenir une longueur moyenne de 2.907, soit un gain de
+    \textbf{16.22 \%} par rapport à \textbf{PPP}, de \textbf{8.07 \%} par rapport à
+    \textbf{OptPPP} et de \textbf{14.33 \%} par rapport à \textbf{PVCPrim}.
+    Ces résultats confirment la qualité des solutions approchées tout en mettant en évidence
+    l’écart restant avec l’optimum.
+
+    \item L’étude statistique, confirmée par les représentations graphiques,
+    montre que les heuristiques offrent un compromis pertinent entre qualité de solution
+    et temps de calcul. En particulier, \textbf{OptPPP} apparaît comme la meilleure
+    méthode approchée parmi celles étudiées, fournissant des solutions proches de l’optimum
+    pour un coût de calcul raisonnable.
 \end{itemize}
+
 
 % ==========================================================
 \section{Analyse de la complexité}
@@ -559,9 +650,6 @@ Cette opération est répétée pour chacun des $n$ sommets.
 \[
 \boxed{\text{Complexité temporelle de PPP : } O(n^2)}
 \]
-
-La complexité spatiale est dominée par le stockage de la matrice des distances,
-soit $O(n^2)$.
 
 \subsection{Amélioration OptPPP}
 
@@ -593,9 +681,6 @@ Le parcours en profondeur s’effectue en temps linéaire $O(n)$.
 \[
 \boxed{\text{Complexité temporelle de PVCPrim : } O(n \log n)}
 \]
-
-La complexité spatiale est dominée par la structure du tas et la matrice des distances,
-soit $O(n^2)$.
 
 \subsection{Algorithme exact HDS (Branch and Bound)}
 

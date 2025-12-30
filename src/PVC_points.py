@@ -24,7 +24,7 @@ class PVC_points(PVC):
                 M[i, j] = self.euclidean_distance(p, q)
 
         self.charger_de_matrice(M)
-        self.seed_ = np.random.randint(0, self.taille_)
+        self.seed_ = rd.randint(0, self.taille_)
         self.idx_map_ = idx_map
         self.inv_ = inv
 
