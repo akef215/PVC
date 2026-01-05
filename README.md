@@ -83,8 +83,8 @@ tsp = PVC_points(points)
 tsp.charger_de_liste(points)
 
 # Exécuter les algorithmes
-cycle_ppp = tsp.PPP(points[0])
-cycle_opt = tsp.OptPPP(points[0])
+cycle_ppp = tsp.PPP()
+cycle_opt = tsp.OptPPP()
 cycle_prim = tsp.PVCPrim()
 best_cycle = tsp.HDS()
 
