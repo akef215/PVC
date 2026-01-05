@@ -1,8 +1,9 @@
-import numpy as np
-from src.heap import Heap
 from enum import Enum
 from heapq import heappush, heappop
 from math import inf
+from bigtree import Node
+import numpy as np
+from src.heap import Heap
 
 class PVC:
     """
@@ -78,6 +79,30 @@ class PVC:
         self.M = M_copy
 
         self.adj_dict_ = self.de_matrice_a_liste(self.M)
+
+    @staticmethod
+    def draw_forest(pi):
+        def build_tree(root, tree):
+            parent = Node(str(root + 1))
+            if tree.get(root) is None:
+                return parent
+            for c in tree[root]:
+                child = build_tree(c, tree)
+                child.parent = parent  
+            return parent
+        
+        children = dict()
+        forest = []
+        for i, v in enumerate(pi):
+            if v < 0:
+                forest.append(i)
+                children.setdefault(i, [])
+            else:   
+                children.setdefault(v, []).append(i)
+
+        for root in forest:
+            build_tree(root, children).vshow() 
+            print("__________")
 
     def prim(self, source=0, verbose=False):
         """
@@ -256,6 +281,7 @@ class PVC:
     def OptPrim(self):
         source = np.random.randint(0, self.taille_)
         pi, d = self.prim(source)
+        #self.draw_forest(pi)
         # construire l'arbre
         M = np.ones(shape=(self.taille_, self.taille_), dtype=float) * np.inf
         for i, v in enumerate(pi):

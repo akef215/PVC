@@ -34,7 +34,8 @@ Ce projet implémente plusieurs méthodes pour résoudre le **Problème du Voyag
 
 ## Structure du projet
 
-
+## Diagramme de classes du projet
+![Diagramme de classes](diagramme_de_classes.png)
 ---
 
 ## Description détaillée des dossiers et fichiers
@@ -46,6 +47,8 @@ Ce projet implémente plusieurs méthodes pour résoudre le **Problème du Voyag
 
 - **data/** : Fichiers de tests, comprenant des ensembles de points aléatoires ou prédéfinis, pouvant être utilisés par les notebooks pour l’analyse.
 
+- **tex/** : Fichiers tex des pdf disponibles.
+
 - **algorithmes/** : Documentation PDF détaillant chaque algorithme implémenté :
   - `ppp.pdf` : Algorithme Point le Plus Proche.
   - `prim.pdf` : Algorithme de Prim et sa variante OptPrim.
@@ -56,6 +59,8 @@ Ce projet implémente plusieurs méthodes pour résoudre le **Problème du Voyag
 - **statistiques.ipynb** : # Notebook pour analyse statistique et visualisation.
 
 - **rapport.pdf** : Rapport complet du projet.
+
+- **notice_utilisation.pdf** : # Notice d'utilisation.
 
 - **requirements.txt** : # Dépendances Python.
 
